@@ -44,11 +44,10 @@ def monitor_file(file_path) -> None:
 
     try:
         while True:
-            time.sleep(60)
+            time.sleep(1)
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
-
 
 if __name__ == "__main__":
     print("[bold]PAT Reporting Dashboard Data Management[/bold]")
