@@ -1,13 +1,13 @@
-from rich import print
-from pathlib import Path
-import time
 import os
 import sys
+import time
+from rich import print
+from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from app import start
 from app.helper import directory_checker
 from dotenv import load_dotenv
+from app import start
 
 load_dotenv()
 
