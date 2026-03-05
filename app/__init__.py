@@ -18,17 +18,17 @@ import threading
 import warnings
 import time
 
-def start() -> None:
+def start(main_data_dump, output_directory) -> None:
     print("PAT Reporting Automation Initiated ...")
 
     start_time = time.time()
 
     warnings.filterwarnings('ignore')
 
-    main_data_dump = Path(os.getenv("MAIN_DATA_DUMP"))
+    # main_data_dump = Path(os.getenv("MAIN_DATA_DUMP"))
 
     folder_directory = main_data_dump / "raw"
-    output_directory = Path(os.getenv("OUTPUT_DATA_DIRECTORY"))
+    # output_directory = Path(os.getenv("OUTPUT_DATA_DIRECTORY"))
 
     REMOVE_REFERENCE = pd.read_excel(main_data_dump / 'Name References.xlsx', sheet_name = 'REMOVE')
 

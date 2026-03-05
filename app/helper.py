@@ -136,3 +136,8 @@ def tenure_sorter_transform(r):
     if r == "0-6 months":
         return 3
     return 4
+
+def directory_checker(dir):
+    if not dir.exists():
+        return False
+    return True
