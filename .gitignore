@@ -3,3 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 README.txt
+venv/
+build/
+dist/
+PAT Automation.spec
