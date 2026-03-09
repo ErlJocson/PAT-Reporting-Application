@@ -13,7 +13,6 @@ from app.helper import (
 import os
 import pandas as pd
 import numpy as np
-from pathlib import Path
 import threading
 import warnings
 import time
@@ -25,10 +24,7 @@ def start(main_data_dump, output_directory) -> None:
 
     warnings.filterwarnings('ignore')
 
-    # main_data_dump = Path(os.getenv("MAIN_DATA_DUMP"))
-
     folder_directory = main_data_dump / "raw"
-    # output_directory = Path(os.getenv("OUTPUT_DATA_DIRECTORY"))
 
     REMOVE_REFERENCE = pd.read_excel(main_data_dump / 'Name References.xlsx', sheet_name = 'REMOVE')
 
@@ -232,7 +228,7 @@ def start(main_data_dump, output_directory) -> None:
             "Month"
         ])
 
-        melted_df['Week Start'] = pd.to_datetime(melted_df['Week Start'], format = 'mixed')
+        melted_df['Week Start'] = pd.to_datetime(melted_df['Week Start'])
 
         melted_df['FIG'] = melted_df['FIG'].replace({"HVCM Hilton Servicing":"Hilton"})
         
