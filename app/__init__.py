@@ -1,28 +1,14 @@
+import os
+import time
+import threading
+import numpy as np
+import pandas as pd
 from rich import print
 from app.vg_toolkit import vg_toolkit_df_transform
 from app.vg_monitoring_adherence import coach_and_qa_transform
-from app.helper import (
-    remove_parentheses_content,
-    add_months,
-    behavior_transformation,
-    behavior_transformation_sorter,
-    sub_behavior_copy_transformation,
-    call_segment_transformation,
-    call_segment_transformation_sorter,
-    get_value
-)
-from app.variables import (
-    rename_columns,
-    behavior_to_drop_columns,
-    segment_to_drop_columns,
-    dump_to_drop_columns
-)
 from app.transformers import name_and_card_reference_transformers
-import os
-import pandas as pd
-import numpy as np
-import threading
-import time
+from app.variables import rename_columns, behavior_to_drop_columns, segment_to_drop_columns, dump_to_drop_columns
+from app.helper import remove_parentheses_content, add_months, behavior_transformation, behavior_transformation_sorter, sub_behavior_copy_transformation, call_segment_transformation, call_segment_transformation_sorter, get_value
 
 def start(main_data_dump, output_directory) -> None:
     print("PAT Reporting Automation Initiated ...")
