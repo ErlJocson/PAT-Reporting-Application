@@ -2,6 +2,7 @@ from rich import print
 from app.vg_toolkit import vg_toolkit_df_transform
 from app.vg_monitoring_adherence import coach_and_qa_transform
 from app.helper import (
+    remove_parentheses_content,
     add_months,
     behavior_transformation,
     behavior_transformation_sorter,
@@ -55,15 +56,6 @@ def start(main_data_dump, output_directory) -> None:
 
     month_references = pd.read_excel(main_data_dump / 'Month References.xlsx')
     month_references = dict(zip(month_references['Week Start'], month_references['Month']))
-
-    def remove_parentheses_content(s):
-        if isinstance(s, str):
-            if '(' in s and ')' in s:
-                before = s[:s.find('(')]
-                after = s[s.find(')')+1:]
-                return (before + after).strip()
-            return s.strip()
-        return s 
 
     def raw_data_consolidator(folder_directory):
         dfs = []

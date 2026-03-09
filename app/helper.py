@@ -141,3 +141,12 @@ def directory_checker(dir):
     if not dir.exists():
         return False
     return True
+
+def remove_parentheses_content(s):
+    if isinstance(s, str):
+        if '(' in s and ')' in s:
+            before = s[:s.find('(')]
+            after = s[s.find(')')+1:]
+            return (before + after).strip()
+        return s.strip()
+    return s 
