@@ -8,6 +8,9 @@ from watchdog.events import FileSystemEventHandler
 from app.helper import directory_checker
 from dotenv import load_dotenv
 from app import start
+from warnings import filterwarnings
+
+filterwarnings('ignore')
 
 load_dotenv()
 
