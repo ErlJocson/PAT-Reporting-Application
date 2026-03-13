@@ -42,9 +42,7 @@ def start(main_data_dump, output_directory) -> None:
     month_references = pd.read_excel(main_data_dump / 'Month References.xlsx')
     month_references = dict(zip(month_references['Week Start'], month_references['Month']))
 
-
-
-    def segment_df_transform(segment_df):
+    def segment_df_transform(df):
         segment_df = df.drop(columns = segment_to_drop_columns).copy()
         segment_df = pd.melt(segment_df, id_vars = [
             "Month",
