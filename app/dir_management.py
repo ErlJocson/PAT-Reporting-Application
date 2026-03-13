@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 from app.helper import directory_checker
+from rich import print
 
 class FileChangeHandler(FileSystemEventHandler):
     def __init__(self, file_to_watch, callback) -> None:
