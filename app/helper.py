@@ -1,3 +1,29 @@
+import pandas as pd
+from app.variables import rename_columns, behavior_to_drop_columns
+
+def name_and_card_reference_transformers(main_data_dump):
+    name_reference_df =  pd.read_excel(main_data_dump / 'Name References.xlsx', sheet_name = 'DUMP')
+    ccp_name_reference_df =  pd.read_excel(main_data_dump / 'Name References.xlsx', sheet_name = 'CCP Name')
+    card_type_refereces_for_vg_toolkit_df = pd.read_excel(main_data_dump / 'Card References.xlsx', sheet_name = 'Sheet1', usecols = ['PAT Card List', 'Referrence'])
+
+    team_leader_reference_df = name_reference_df[['Team Leader', 'Team Leader New Name']].copy().dropna()
+    monitored_by_reference_df = name_reference_df[['Monitored By', 'Monitored By New Name']].copy().dropna()
+    manager_reference_df = name_reference_df[['Manager', 'Manager New Name']].copy().dropna()
+
+    team_leader_reference_df = dict(zip(team_leader_reference_df['Team Leader'], team_leader_reference_df['Team Leader New Name']))
+    monitored_by_reference_df = dict(zip(monitored_by_reference_df['Monitored By'], monitored_by_reference_df['Monitored By New Name']))
+    manager_reference_df = dict(zip(manager_reference_df['Manager'], manager_reference_df['Manager New Name']))
+    ccp_name_reference_df = dict(zip(ccp_name_reference_df['Employee ID'], ccp_name_reference_df['CCP Name']))
+    card_type_refereces_for_vg_toolkit_df = dict(zip(card_type_refereces_for_vg_toolkit_df['PAT Card List'], card_type_refereces_for_vg_toolkit_df['Referrence']))
+    
+    return {
+        "team_leader_reference_df" : team_leader_reference_df,
+        "monitored_by_reference_df" : monitored_by_reference_df,
+        "manager_reference_df" : manager_reference_df,
+        "ccp_name_reference_df" : ccp_name_reference_df,
+        "card_type_refereces_for_vg_toolkit_df" : card_type_refereces_for_vg_toolkit_df,
+    }
+
 def add_months(r):
     r = str(r)
     if r == 'OJT':
@@ -150,3 +176,126 @@ def remove_parentheses_content(s):
             return (before + after).strip()
         return s.strip()
     return s 
+
+def raw_data_consolidator(folder_directory):
+    dfs = []
+    
+    for file in folder_directory.glob("*.xlsx"):
+        df = pd.read_excel(file)
+        df = df.applymap(lambda x: x.replace('\n', '') if isinstance(x, str) else x)
+        df.columns = df.columns.str.replace('\n', '', regex=False)
+        df = df.rename(columns = rename_columns)
+        df['CCP Name'] = df['CCP Name'].apply(remove_parentheses_content)
+        df['Team Leader'] = df['Team Leader'].apply(remove_parentheses_content)
+        df['Manager'] = df['Manager'].apply(remove_parentheses_content)
+        df["CHT (sec/s)"] = df["CHT (sec/s)"].astype(str).str.replace("Secs", "").astype(float)
+        df["OPEN - Call Segment In Seconds"] = df["OPEN - Call Segment In Seconds"].astype(str).str.replace("Secs", "").astype(float)
+        df["SOLVE - Call Segment In Seconds"] = df["SOLVE - Call Segment In Seconds"].astype(str).str.replace("Secs", "").astype(float)
+        df["DEEPEN RELATIONSHIP - Call Segment In Seconds"] = df["DEEPEN RELATIONSHIP - Call Segment In Seconds"].astype(str).str.replace("Secs", "").astype(float)
+        df["CLOSE WITH CONFIDENCE - Call Segment In Seconds"] = df["CLOSE WITH CONFIDENCE - Call Segment In Seconds"].astype(str).str.replace("Secs", "").astype(float)
+        df["Total Time of Call - Call Segment In Seconds"] = df["Total Time of Call - Call Segment In Seconds"].astype(str).str.replace("Secs", "").astype(float)
+        df["Waste (Actual CHT - Total Time Spent)"] = df["Waste (Actual CHT - Total Time Spent)"].astype(str).str.replace("Secs", "").astype(float)
+        df['Site'] = df['Site'].replace({
+            "MANILA":"QUEZON CITY",
+            "ILOILO":"ILOILO CITY",
+        })
+        dfs.append(df)
+
+    consolidated_df = pd.concat(dfs)
+
+    consolidated_df = consolidated_df[consolidated_df['Tenure'] != 'Support']
+
+    consolidated_df['Tenure'] = consolidated_df['Tenure'].apply(add_months)
+
+    return consolidated_df
+
+def attendance_consolidator(directory):
+    return pd.concat([
+        attendance_transformer(file) for file in directory.glob('*.csv')
+    ])
+
+def attendance_transformer(file):
+    columns_to_include = [
+        "EID",
+        "CCP Name",
+        "Site",
+        "FIG",
+        "Manager",
+        "Team Lead",
+        "Tenure",
+        "Month",
+    ]
+    
+    df = pd.read_csv(file, encoding = 'latin-1')
+
+    df['Month'] = str(file).split("\\")[-1].split('.')[0]
+    
+    df = df.drop(columns = ['CID', 'CCP Status'])
+
+    for col in df.columns:
+        converted = pd.to_datetime(col, errors='coerce')
+        if not pd.isna(converted):
+            if col not in columns_to_include:
+                columns_to_include.append(col)
+    
+    melted_df = pd.melt(df, var_name = 'Week Start', value_name = 'Present', id_vars=[
+        "EID",
+        "CCP Name",
+        "Site",
+        "FIG",
+        "Manager",
+        "Team Lead",
+        "Tenure",
+        "Month"
+    ])
+
+    melted_df['Week Start'] = pd.to_datetime(melted_df['Week Start'])
+
+    melted_df['FIG'] = melted_df['FIG'].replace({"HVCM Hilton Servicing":"Hilton"})
+    
+    return melted_df
+
+def behavior_df_transform(df):
+    behavior_df = df.drop(columns = behavior_to_drop_columns).copy()
+    behavior_df = pd.melt(behavior_df, id_vars=[
+        "Employee ID",
+        "CCP Name",
+        "Team Leader",
+        "TL",
+        "Manager",
+        "Monitored By Name",
+        "Tenure",
+        "FIG",
+        "Site",
+        "Interaction ID",
+        "CHT (sec/s)",
+        "Card Type",
+        "OPEN - Call Segment In Seconds",
+        "SOLVE - Call Segment In Seconds",
+        "DEEPEN RELATIONSHIP - Call Segment In Seconds",
+        "CLOSE WITH CONFIDENCE - Call Segment In Seconds",
+        "Caller Type",
+        "Call Reason",
+        "Monitoring Date",
+        "Monitor Date",
+        "Monitored By",
+        "Monitered Employee Id",
+        "TL=Monitored By",
+        "FIG NEW",
+        "Month",
+        "Week Start ",
+        "Ref",
+        'CCP_1', 
+        'Acknowledged'
+    ], var_name="Sub Behavior", value_name="Sub Behavior Value")
+    behavior_df['Sub Behavior'] = behavior_df['Sub Behavior'].replace({
+        "Human Connection (Listen)":"Human Connection",
+        "Acknowledge Emotion (Acknowledge)":"Acknowledge Emotion",
+        "Discover Solutions (Explore)":"Discover Solutions",
+        "Share a Relevant Offer or Message (Recommend)":"Share a Relevant Offer or Message",
+    })
+    
+    behavior_df['Sub Behavior - Copy'] = behavior_df['Sub Behavior'].apply(sub_behavior_copy_transformation)
+    behavior_df['Behavior'] = behavior_df['Sub Behavior'].apply(behavior_transformation)
+    behavior_df['Behavior - Copy'] = behavior_df['Sub Behavior'].apply(behavior_transformation_sorter)
+    return behavior_df

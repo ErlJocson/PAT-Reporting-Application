@@ -6,9 +6,8 @@ import pandas as pd
 from rich import print
 from app.vg_toolkit import vg_toolkit_df_transform
 from app.vg_monitoring_adherence import coach_and_qa_transform
-from app.transformers import name_and_card_reference_transformers
-from app.variables import rename_columns, behavior_to_drop_columns, segment_to_drop_columns, dump_to_drop_columns
-from app.helper import remove_parentheses_content, add_months, behavior_transformation, behavior_transformation_sorter, sub_behavior_copy_transformation, call_segment_transformation, call_segment_transformation_sorter, get_value
+from app.variables import segment_to_drop_columns, dump_to_drop_columns
+from app.helper import behavior_df_transform, call_segment_transformation, call_segment_transformation_sorter, get_value, raw_data_consolidator, attendance_consolidator, name_and_card_reference_transformers
 
 def start(main_data_dump, output_directory) -> None:
     print("PAT Reporting Automation Initiated ...")
@@ -43,129 +42,7 @@ def start(main_data_dump, output_directory) -> None:
     month_references = pd.read_excel(main_data_dump / 'Month References.xlsx')
     month_references = dict(zip(month_references['Week Start'], month_references['Month']))
 
-    def raw_data_consolidator(folder_directory):
-        dfs = []
-        
-        for file in folder_directory.glob("*.xlsx"):
-            df = pd.read_excel(file)
-            df = df.applymap(lambda x: x.replace('\n', '') if isinstance(x, str) else x)
-            df.columns = df.columns.str.replace('\n', '', regex=False)
-            df = df.rename(columns = rename_columns)
-            df['CCP Name'] = df['CCP Name'].apply(remove_parentheses_content)
-            df['Team Leader'] = df['Team Leader'].apply(remove_parentheses_content)
-            df['Manager'] = df['Manager'].apply(remove_parentheses_content)
-            df["CHT (sec/s)"] = df["CHT (sec/s)"].astype(str).str.replace("Secs", "").astype(float)
-            df["OPEN - Call Segment In Seconds"] = df["OPEN - Call Segment In Seconds"].astype(str).str.replace("Secs", "").astype(float)
-            df["SOLVE - Call Segment In Seconds"] = df["SOLVE - Call Segment In Seconds"].astype(str).str.replace("Secs", "").astype(float)
-            df["DEEPEN RELATIONSHIP - Call Segment In Seconds"] = df["DEEPEN RELATIONSHIP - Call Segment In Seconds"].astype(str).str.replace("Secs", "").astype(float)
-            df["CLOSE WITH CONFIDENCE - Call Segment In Seconds"] = df["CLOSE WITH CONFIDENCE - Call Segment In Seconds"].astype(str).str.replace("Secs", "").astype(float)
-            df["Total Time of Call - Call Segment In Seconds"] = df["Total Time of Call - Call Segment In Seconds"].astype(str).str.replace("Secs", "").astype(float)
-            df["Waste (Actual CHT - Total Time Spent)"] = df["Waste (Actual CHT - Total Time Spent)"].astype(str).str.replace("Secs", "").astype(float)
-            df['Site'] = df['Site'].replace({
-                "MANILA":"QUEZON CITY",
-                "ILOILO":"ILOILO CITY",
-            })
-            dfs.append(df)
 
-        consolidated_df = pd.concat(dfs)
-
-        consolidated_df = consolidated_df[consolidated_df['Tenure'] != 'Support']
-
-        consolidated_df['Tenure'] = consolidated_df['Tenure'].apply(add_months)
-
-        return consolidated_df
-
-    def attendance_transformer(file):
-        columns_to_include = [
-            "EID",
-            "CCP Name",
-            "Site",
-            "FIG",
-            "Manager",
-            "Team Lead",
-            "Tenure",
-            "Month",
-        ]
-        
-        df = pd.read_csv(file, encoding = 'latin-1')
-
-        df['Month'] = str(file).split("\\")[-1].split('.')[0]
-        
-        df = df.drop(columns = ['CID', 'CCP Status'])
-
-        for col in df.columns:
-            converted = pd.to_datetime(col, errors='coerce')
-            if not pd.isna(converted):
-                if col not in columns_to_include:
-                    columns_to_include.append(col)
-        
-        melted_df = pd.melt(df, var_name = 'Week Start', value_name = 'Present', id_vars=[
-            "EID",
-            "CCP Name",
-            "Site",
-            "FIG",
-            "Manager",
-            "Team Lead",
-            "Tenure",
-            "Month"
-        ])
-
-        melted_df['Week Start'] = pd.to_datetime(melted_df['Week Start'])
-
-        melted_df['FIG'] = melted_df['FIG'].replace({"HVCM Hilton Servicing":"Hilton"})
-        
-        return melted_df
-
-    def attendance_consolidator(directory):
-        return pd.concat([
-            attendance_transformer(file) for file in directory.glob('*.csv')
-        ])
-
-
-    def behavior_df_transform(df):
-        behavior_df = df.drop(columns = behavior_to_drop_columns).copy()
-        behavior_df = pd.melt(behavior_df, id_vars=[
-            "Employee ID",
-            "CCP Name",
-            "Team Leader",
-            "TL",
-            "Manager",
-            "Monitored By Name",
-            "Tenure",
-            "FIG",
-            "Site",
-            "Interaction ID",
-            "CHT (sec/s)",
-            "Card Type",
-            "OPEN - Call Segment In Seconds",
-            "SOLVE - Call Segment In Seconds",
-            "DEEPEN RELATIONSHIP - Call Segment In Seconds",
-            "CLOSE WITH CONFIDENCE - Call Segment In Seconds",
-            "Caller Type",
-            "Call Reason",
-            "Monitoring Date",
-            "Monitor Date",
-            "Monitored By",
-            "Monitered Employee Id",
-            "TL=Monitored By",
-            "FIG NEW",
-            "Month",
-            "Week Start ",
-            "Ref",
-            'CCP_1', 
-            'Acknowledged'
-        ], var_name="Sub Behavior", value_name="Sub Behavior Value")
-        behavior_df['Sub Behavior'] = behavior_df['Sub Behavior'].replace({
-            "Human Connection (Listen)":"Human Connection",
-            "Acknowledge Emotion (Acknowledge)":"Acknowledge Emotion",
-            "Discover Solutions (Explore)":"Discover Solutions",
-            "Share a Relevant Offer or Message (Recommend)":"Share a Relevant Offer or Message",
-        })
-        
-        behavior_df['Sub Behavior - Copy'] = behavior_df['Sub Behavior'].apply(sub_behavior_copy_transformation)
-        behavior_df['Behavior'] = behavior_df['Sub Behavior'].apply(behavior_transformation)
-        behavior_df['Behavior - Copy'] = behavior_df['Sub Behavior'].apply(behavior_transformation_sorter)
-        return behavior_df
 
     def segment_df_transform(segment_df):
         segment_df = df.drop(columns = segment_to_drop_columns).copy()
